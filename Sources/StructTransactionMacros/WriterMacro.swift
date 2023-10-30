@@ -63,12 +63,12 @@ extension WriterMacro: ExtensionMacro {
       case .computedGetOnly(let b, let accessorBlock):
         """
         public var \(b.pattern): \(b.typeAnnotation!.type)
-        \(accessorBlock.trimmed { _ in true })
+        \(makeMutatingGetter(accessorBlock))
         """
       case .computed(let b, let accessorBlock):
         """
         public var \(b.pattern): \(b.typeAnnotation!.type)
-        \(accessorBlock)
+        \(makeMutatingGetter(accessorBlock))
         """
       }
 
@@ -125,6 +125,47 @@ extension WriterMacro: ExtensionMacro {
         .cast(ExtensionDeclSyntax.self)
     ]
 
+  }
+
+}
+
+private func makeMutatingGetter(_ block: AccessorBlockSyntax) -> AccessorBlockSyntax {
+
+  switch block.accessors {
+  case .accessors(let list):
+
+    let decl = MutatingGetterConverter().visit(list)
+
+    return """
+{
+  \(decl)
+}
+""" as AccessorBlockSyntax
+
+  case .getter(let getter):
+    return """
+{
+  mutating get { \(getter) }
+}
+""" as AccessorBlockSyntax
+  }
+
+}
+
+/**
+convert get-accessor into mutating-get-accessor
+ */
+final class MutatingGetterConverter: SyntaxRewriter {
+
+  override func visit(_ node: AccessorDeclSyntax) -> DeclSyntax {
+
+    if node.accessorSpecifier.text == "get" || node.accessorSpecifier.text == "_read" {
+      var _node = node
+      _node.modifier = DeclModifierSyntax(name: "mutating")
+      return super.visit(_node)
+    }
+
+    return super.visit(node)
   }
 
 }
