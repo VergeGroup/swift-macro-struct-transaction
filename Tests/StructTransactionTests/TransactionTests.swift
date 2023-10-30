@@ -10,7 +10,7 @@ struct JustWrapper<Value> {
 
 final class WritingStateTests: XCTestCase {
 
-  @Writing
+  @Detecting
   struct MyState {
 
     var age: Int = 18
@@ -39,9 +39,15 @@ final class WritingStateTests: XCTestCase {
     }
 
     var nested: Nested = .init(name: "hello")
+    var nestedAttached: NestedAttached = .init(name: "")
 
     struct Nested {
       var name = ""
+    }
+
+    @Detecting
+    struct NestedAttached {
+      var name: String = ""
     }
 
   }
@@ -80,6 +86,30 @@ final class WritingStateTests: XCTestCase {
 
     XCTAssertEqual(r.modifiedIdentifiers, .init(["name"]))
     XCTAssertEqual(myState.name, "A")
+  }
+
+  func testModifyNestedAttached() {
+
+    var myState = MyState(name: "")
+
+    myState.nestedAttached.modify {
+      $0.name = "A"
+    }
+
+    XCTAssertEqual(myState.nestedAttached.name, "A")
+
+    myState.modify {
+
+      $0.name = "A"
+
+      $0.nestedAttached.modify {
+        $0.name = "B"
+      }
+    }
+
+    XCTAssertEqual(myState.name, "A")
+    XCTAssertEqual(myState.nestedAttached.name, "B")
+
   }
 
 }
