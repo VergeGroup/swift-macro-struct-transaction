@@ -43,6 +43,20 @@ extension MyState: DetectingType {
     }
   }
 
+  @discardableResult
+  public static func read(source: Self, reader: (Modifying) throws -> Void) rethrows -> ReadResult {
+    // FIXME: avoid copying
+    var reading = source
+
+    return try withUnsafeMutablePointer(to: &reading) { pointer in
+      let modifying = Modifying(pointer: pointer)
+      try reader(modifying)
+      return ReadResult(
+        readIdentifiers: modifying.$_readIdentifiers
+      )
+    }
+  }
+
   public struct Modifying /* want to be ~Copyable */ {
 
     public private (set) var $_readIdentifiers: Set<String> = .init()
@@ -103,6 +117,20 @@ extension MyState: DetectingType {
       return ModifyingResult(
         readIdentifiers: modifying.$_readIdentifiers,
         modifiedIdentifiers: modifying.$_modifiedIdentifiers
+      )
+    }
+  }
+
+  @discardableResult
+  public static func read(source: Self, reader: (Modifying) throws -> Void) rethrows -> ReadResult {
+    // FIXME: avoid copying
+    var reading = source
+
+    return try withUnsafeMutablePointer(to: &reading) { pointer in
+      let modifying = Modifying(pointer: pointer)
+      try reader(modifying)
+      return ReadResult(
+        readIdentifiers: modifying.$_readIdentifiers
       )
     }
   }
@@ -198,6 +226,20 @@ extension MyState: DetectingType {
       return ModifyingResult(
         readIdentifiers: modifying.$_readIdentifiers,
         modifiedIdentifiers: modifying.$_modifiedIdentifiers
+      )
+    }
+  }
+
+  @discardableResult
+  public static func read(source: Self, reader: (Modifying) throws -> Void) rethrows -> ReadResult {
+    // FIXME: avoid copying
+    var reading = source
+
+    return try withUnsafeMutablePointer(to: &reading) { pointer in
+      let modifying = Modifying(pointer: pointer)
+      try reader(modifying)
+      return ReadResult(
+        readIdentifiers: modifying.$_readIdentifiers
       )
     }
   }
