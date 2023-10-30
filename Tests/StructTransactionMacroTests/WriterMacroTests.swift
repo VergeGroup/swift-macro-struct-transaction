@@ -10,35 +10,8 @@ final class WriterMacroTests: XCTestCase {
 
     assertMacroExpansion(
       #"""
-      @Writing
+      @Detecting
       struct MyState {
-
-        let constant_has_initial_value: Int = 0
-
-        var variable_has_initial_value: String = ""
-
-        let constant_no_initial_value: Int
-
-        var variable_no_initial_value: String
-
-        var computed_read_only: Int {
-          constant_has_initial_value
-        }
-
-        var computed_read_only2: Int {
-          get {
-            constant_has_initial_value
-          }
-        }
-
-        var computed_readwrite: String {
-          get {
-            variable_no_initial_value
-          }
-          set {
-            variable_no_initial_value = newValue
-          }
-        }
 
         @MyPropertyWrapper
         var stored_property_wrapper: String = ""
@@ -46,140 +19,122 @@ final class WriterMacroTests: XCTestCase {
       }
       """#,
       expandedSource: #"""
-        struct MyState {
+struct MyState {
 
-          let constant_has_initial_value: Int = 0
+  @MyPropertyWrapper
+  var stored_property_wrapper: String = ""
 
-          var variable_has_initial_value: String = ""
+}
 
-          let constant_no_initial_value: Int
+extension MyState: DetectingType {
 
-          var variable_no_initial_value: String
+  typealias ModifyingTarget = Self
 
-          var computed_read_only: Int {
-            constant_has_initial_value
-          }
+  @discardableResult
+  public static func modify(source: inout Self, modifier: (inout Modifying) throws -> Void) rethrows -> ModifyingResult {
 
-          var computed_read_only2: Int {
-            get {
-              constant_has_initial_value
-            }
-          }
+    try withUnsafeMutablePointer(to: &source) { pointer in
+      var modifying = Modifying(pointer: pointer)
+      try modifier(&modifying)
+      return ModifyingResult(
+        readIdentifiers: modifying.$_readIdentifiers,
+        modifiedIdentifiers: modifying.$_modifiedIdentifiers
+      )
+    }
+  }
 
-          var computed_readwrite: String {
-            get {
-              variable_no_initial_value
-            }
-            set {
-              variable_no_initial_value = newValue
-            }
-          }
+  public struct Modifying /* want to be ~Copyable */ {
 
-          @MyPropertyWrapper
-          var stored_property_wrapper: String = ""
+    public private (set) var $_readIdentifiers: Set<String> = .init()
+    public private (set) var $_modifiedIdentifiers: Set<String> = .init()
 
-        }
+    private let pointer: UnsafeMutablePointer<ModifyingTarget>
 
-        extension MyState: StateModifyingType {
+    init(pointer: UnsafeMutablePointer<ModifyingTarget>) {
+      self.pointer = pointer
+    }
 
-          typealias ModifyingTarget = Self
-
-          @discardableResult
-          public static func modify(source: inout Self, modifier: (inout Modifying) throws -> Void) rethrows -> ModifyingResult {
-
-            try withUnsafeMutablePointer(to: &source) { pointer in
-              var modifying = Modifying(pointer: pointer)
-              try modifier(&modifying)
-              return ModifyingResult(modifiedIdentifiers: modifying.modifiedIdentifiers)
-            }
-          }
-
-          public struct Modifying /* want to be ~Copyable */ {
-
-            public var modifiedIdentifiers: Set<String> = .init()
-
-            private let pointer: UnsafeMutablePointer<ModifyingTarget>
-
-            init(pointer: UnsafeMutablePointer<ModifyingTarget>) {
-              self.pointer = pointer
-            }
-
-            public var constant_has_initial_value: Int  {
-            _read {
-              yield pointer.pointee.constant_has_initial_value
-            }
-            _modify {
-              modifiedIdentifiers.insert("constant_has_initial_value")
-              yield &pointer.pointee.constant_has_initial_value
-            }
-          }
-
-          public var variable_has_initial_value: String  {
-            _read {
-              yield pointer.pointee.variable_has_initial_value
-            }
-            _modify {
-              modifiedIdentifiers.insert("variable_has_initial_value")
-              yield &pointer.pointee.variable_has_initial_value
-            }
-          }
-
-          public var constant_no_initial_value: Int {
-            _read {
-              yield pointer.pointee.constant_no_initial_value
-            }
-            _modify {
-              modifiedIdentifiers.insert("constant_no_initial_value")
-              yield &pointer.pointee.constant_no_initial_value
-            }
-          }
-
-          public var variable_no_initial_value: String {
-            _read {
-              yield pointer.pointee.variable_no_initial_value
-            }
-            _modify {
-              modifiedIdentifiers.insert("variable_no_initial_value")
-              yield &pointer.pointee.variable_no_initial_value
-            }
-          }
-
-          public var computed_read_only: Int  {
-            _read {
-              yield pointer.pointee.computed_read_only
-            }
-          }
-
-          public var computed_read_only2: Int  {
-            _read {
-              yield pointer.pointee.computed_read_only2
-            }
-          }
-
-          public var computed_readwrite: String  {
-            _read {
-              yield pointer.pointee.computed_readwrite
-            }
-          }
-
-          public var stored_property_wrapper: String  {
-            _read {
-              yield pointer.pointee.stored_property_wrapper
-            }
-            _modify {
-              modifiedIdentifiers.insert("stored_property_wrapper")
-              yield &pointer.pointee.stored_property_wrapper
-            }
-          }
-          }
-        }
-        """#,
-      macros: ["Writing": WriterMacro.self]
+    public var stored_property_wrapper: String  {
+    mutating _read {
+      $_readIdentifiers.insert("stored_property_wrapper")
+      yield pointer.pointee.stored_property_wrapper
+    }
+    _modify {
+      $_modifiedIdentifiers.insert("stored_property_wrapper")
+      yield &pointer.pointee.stored_property_wrapper
+    }
+  }
+  }
+}
+"""#,
+      macros: ["Detecting": WriterMacro.self]
     )
 
   }
 
+  func test_1() {
 
+    assertMacroExpansion(
+      #"""
+      @Detecting
+      struct MyState {
+
+        let constant_has_initial_value: Int = 0
+
+      }
+      """#,
+      expandedSource: #"""
+struct MyState {
+
+  let constant_has_initial_value: Int = 0
+
+}
+
+extension MyState: DetectingType {
+
+  typealias ModifyingTarget = Self
+
+  @discardableResult
+  public static func modify(source: inout Self, modifier: (inout Modifying) throws -> Void) rethrows -> ModifyingResult {
+
+    try withUnsafeMutablePointer(to: &source) { pointer in
+      var modifying = Modifying(pointer: pointer)
+      try modifier(&modifying)
+      return ModifyingResult(
+        readIdentifiers: modifying.$_readIdentifiers,
+        modifiedIdentifiers: modifying.$_modifiedIdentifiers
+      )
+    }
+  }
+
+  public struct Modifying /* want to be ~Copyable */ {
+
+    public private (set) var $_readIdentifiers: Set<String> = .init()
+    public private (set) var $_modifiedIdentifiers: Set<String> = .init()
+
+    private let pointer: UnsafeMutablePointer<ModifyingTarget>
+
+    init(pointer: UnsafeMutablePointer<ModifyingTarget>) {
+      self.pointer = pointer
+    }
+
+    public var constant_has_initial_value: Int  {
+    mutating _read {
+      $_readIdentifiers.insert("constant_has_initial_value")
+      yield pointer.pointee.constant_has_initial_value
+    }
+    _modify {
+      $_modifiedIdentifiers.insert("constant_has_initial_value")
+      yield &pointer.pointee.constant_has_initial_value
+    }
+  }
+  }
+}
+"""#,
+      macros: ["Detecting": WriterMacro.self]
+    )
+
+  }
   func test_getter() {
 
     assertMacroExpansion(
@@ -208,7 +163,84 @@ final class WriterMacroTests: XCTestCase {
       }
       """#,
       expandedSource: #"""
-        """#,
+struct MyState {
+
+  var computed_read_only: Int {
+    constant_has_initial_value
+  }
+
+  var computed_read_only2: Int {
+    get {
+      constant_has_initial_value
+    }
+  }
+
+  var computed_readwrite: String {
+    get {
+      variable_no_initial_value
+    }
+    set {
+      variable_no_initial_value = newValue
+    }
+  }
+}
+
+extension MyState: DetectingType {
+
+  typealias ModifyingTarget = Self
+
+  @discardableResult
+  public static func modify(source: inout Self, modifier: (inout Modifying) throws -> Void) rethrows -> ModifyingResult {
+
+    try withUnsafeMutablePointer(to: &source) { pointer in
+      var modifying = Modifying(pointer: pointer)
+      try modifier(&modifying)
+      return ModifyingResult(
+        readIdentifiers: modifying.$_readIdentifiers,
+        modifiedIdentifiers: modifying.$_modifiedIdentifiers
+      )
+    }
+  }
+
+  public struct Modifying /* want to be ~Copyable */ {
+
+    public private (set) var $_readIdentifiers: Set<String> = .init()
+    public private (set) var $_modifiedIdentifiers: Set<String> = .init()
+
+    private let pointer: UnsafeMutablePointer<ModifyingTarget>
+
+    init(pointer: UnsafeMutablePointer<ModifyingTarget>) {
+      self.pointer = pointer
+    }
+
+    public var computed_read_only: Int
+  {
+    mutating get {
+      constant_has_initial_value
+  }
+  }
+
+  public var computed_read_only2: Int
+  {
+    mutating
+        get {
+          constant_has_initial_value
+        }
+  }
+
+  public var computed_readwrite: String
+  {
+    mutating
+        get {
+          variable_no_initial_value
+        }
+        set {
+          variable_no_initial_value = newValue
+        }
+  }
+  }
+}
+"""#,
       macros: ["Writing": WriterMacro.self]
     )
 
