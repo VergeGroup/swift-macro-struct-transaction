@@ -48,11 +48,17 @@ let package = Package(
 
     // A test target used to develop the macro implementation.
     .testTarget(
-      name: "StructTransactionTests",
+      name: "StructTransactionMacroTests",
       dependencies: [
-        "StructTransaction",
         "StructTransactionMacros",
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
+      ]
+    ),
+
+    .testTarget(
+      name: "StructTransactionTests",
+      dependencies: [
+        "StructTransaction"
       ]
     ),
   ]

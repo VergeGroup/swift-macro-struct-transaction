@@ -179,5 +179,39 @@ final class WriterMacroTests: XCTestCase {
 
   }
 
+
+  func test_getter() {
+
+    assertMacroExpansion(
+      #"""
+      @Writing
+      struct MyState {
+
+        var computed_read_only: Int {
+          constant_has_initial_value
+        }
+
+        var computed_read_only2: Int {
+          get {
+            constant_has_initial_value
+          }
+        }
+
+        var computed_readwrite: String {
+          get {
+            variable_no_initial_value
+          }
+          set {
+            variable_no_initial_value = newValue
+          }
+        }
+      }
+      """#,
+      expandedSource: #"""
+        """#,
+      macros: ["Writing": WriterMacro.self]
+    )
+
+  }
 }
 
