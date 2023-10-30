@@ -66,7 +66,20 @@ final class WritingStateTests: XCTestCase {
       $0.nested.name = "hey"
     }
 
+    XCTAssertEqual(r.modifiedIdentifiers, .init(["nested"]))
     XCTAssertEqual(myState.nested.name, "hey")
+  }
+
+  func testModifyOverComputedProperty() {
+
+    var myState = MyState(name: "")
+
+    let r = myState.modify {
+      $0.computed_setter = "A"
+    }
+
+    XCTAssertEqual(r.modifiedIdentifiers, .init(["name"]))
+    XCTAssertEqual(myState.name, "A")
   }
 
 }
