@@ -41,7 +41,8 @@ extension WriterMacro: ExtensionMacro {
       case .storedConstant(let b):
         """
         public var \(b.pattern): \(b.typeAnnotation!.type) {
-          _read {
+          mutating _read {
+            $_readIdentifiers.insert("\(b.pattern)")
             yield pointer.pointee.\(b.pattern)
           }
         }
@@ -49,11 +50,12 @@ extension WriterMacro: ExtensionMacro {
       case .storedVaraiable(let b):
         """
         public var \(b.pattern): \(b.typeAnnotation!.type) {
-          _read {
+          mutating _read {
+            $_readIdentifiers.insert("\(b.pattern)")
             yield pointer.pointee.\(b.pattern)
           }
           _modify {
-            modifiedIdentifiers.insert("\(b.pattern)")
+            $_modifiedIdentifiers.insert("\(b.pattern)")
             yield &pointer.pointee.\(b.pattern)
           }
         }
@@ -75,7 +77,8 @@ extension WriterMacro: ExtensionMacro {
     let modifyingStructDecl = """
       public struct Modifying /* want to be ~Copyable */ {
 
-        public var modifiedIdentifiers: Set<String> = .init()
+        public private(set) var $_readIdentifiers: Set<String> = .init()
+        public private(set) var $_modifiedIdentifiers: Set<String> = .init()
 
         private let pointer: UnsafeMutablePointer<ModifyingTarget>
 
@@ -99,7 +102,10 @@ extension WriterMacro: ExtensionMacro {
           try withUnsafeMutablePointer(to: &source) { pointer in
             var modifying = Modifying(pointer: pointer)
             try modifier(&modifying)
-            return ModifyingResult(modifiedIdentifiers: modifying.modifiedIdentifiers)
+            return ModifyingResult(
+              readIdentifiers: modifying.$_readIdentifiers,
+              modifiedIdentifiers: modifying.$_modifiedIdentifiers
+            )
           }
         }
 

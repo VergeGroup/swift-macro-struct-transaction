@@ -50,6 +50,7 @@ let package = Package(
     .testTarget(
       name: "StructTransactionTests",
       dependencies: [
+        "StructTransaction",
         "StructTransactionMacros",
         .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax"),
       ]

@@ -21,9 +21,14 @@ extension StateModifyingType {
 
 public struct ModifyingResult {
 
+  public let readIdentifiers: Set<String>
   public let modifiedIdentifiers: Set<String>
 
-  public init(modifiedIdentifiers: Set<String>) {
+  public init(
+    readIdentifiers: Set<String>,
+    modifiedIdentifiers: Set<String>
+  ) {
+    self.readIdentifiers = readIdentifiers
     self.modifiedIdentifiers = modifiedIdentifiers
   }
 }
