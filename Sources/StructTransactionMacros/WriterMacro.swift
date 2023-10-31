@@ -67,6 +67,16 @@ extension WriterMacro: ExtensionMacro {
       return ""
     }
 
+    let functions = declaration
+      .memberBlock
+      .members
+      .compactMap {
+        $0.as(MemberBlockItemSyntax.self)?.decl.as(FunctionDeclSyntax.self)
+      }
+      .filter {
+        $0.attributes.contains { $0.trimmed.description == "@Exporting" }
+      }
+
     let c = PropertyCollector(viewMode: .all)
     c.onError = { node, error in
       context.addDiagnostics(from: error, node: node)
@@ -124,7 +134,13 @@ extension WriterMacro: ExtensionMacro {
           self.pointer = pointer
         }
 
+        // MARK: - Properties
+
         \(raw: decls.joined(separator: "\n\n"))
+
+        // MARK: - Functions
+
+        \(raw: functions.map(\.description).joined(separator: "\n\n"))
       }
       """ as DeclSyntax
 
@@ -162,6 +178,7 @@ extension WriterMacro: ExtensionMacro {
       }
 
       \(modifyingStructDecl)
+
       """ as CodeBlockItemListSyntax)
 
     return modifyingDecl

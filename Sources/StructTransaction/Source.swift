@@ -1,4 +1,7 @@
 
+/**
+ Available only for structs
+ */
 @attached(
   extension,
   conformances: DetectingType,
@@ -8,6 +11,13 @@
   named(AccessingTarget)
 )
 public macro Detecting() = #externalMacro(module: "StructTransactionMacros", type: "WriterMacro")
+
+/**
+ Available only for member functions.
+ Marker Macro that indicates if the function will be exported into Accessing struct.
+ */
+@attached(peer)
+public macro Exporting() = #externalMacro(module: "StructTransactionMacros", type: "MarkerMacro")
 
 /**
  Use ``Detecting()`` macro to adapt struct
