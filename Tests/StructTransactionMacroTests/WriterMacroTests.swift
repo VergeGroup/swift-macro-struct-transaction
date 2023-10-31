@@ -39,15 +39,16 @@ final class WriterMacroTests: XCTestCase {
 
       extension MyState: DetectingType {
 
-        typealias ModifyingTarget = Self
+        // MARK: - Accessing
+        typealias AccessingTarget = Self
 
         @discardableResult
-        public static func modify(source: inout Self, modifier: (inout Modifying) throws -> Void) rethrows -> ModifyingResult {
+        public static func modify(source: inout Self, modifier: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
 
           try withUnsafeMutablePointer(to: &source) { pointer in
-            var modifying = Modifying(pointer: pointer)
+            var modifying = Accessing(pointer: pointer)
             try modifier(&modifying)
-            return ModifyingResult(
+            return AccessingResult(
               readIdentifiers: modifying.$_readIdentifiers,
               modifiedIdentifiers: modifying.$_modifiedIdentifiers
             )
@@ -55,27 +56,29 @@ final class WriterMacroTests: XCTestCase {
         }
 
         @discardableResult
-        public static func read(source: Self, reader: (Modifying) throws -> Void) rethrows -> ReadResult {
-          // FIXME: avoid copying
-          var reading = source
+        public static func read(source: consuming Self, reader: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
 
-          return try withUnsafeMutablePointer(to: &reading) { pointer in
-            let modifying = Modifying(pointer: pointer)
-            try reader(modifying)
-            return ReadResult(
-              readIdentifiers: modifying.$_readIdentifiers
+          // TODO: check copying costs
+          var tmp = source
+
+          return try withUnsafeMutablePointer(to: &tmp) { pointer in
+            var modifying = Accessing(pointer: pointer)
+            try reader(&modifying)
+            return AccessingResult(
+              readIdentifiers: modifying.$_readIdentifiers,
+              modifiedIdentifiers: modifying.$_modifiedIdentifiers
             )
           }
         }
 
-        public struct Modifying /* want to be ~Copyable */ {
+        public struct Accessing /* want to be ~Copyable */ {
 
           public private (set) var $_readIdentifiers: Set<String> = .init()
           public private (set) var $_modifiedIdentifiers: Set<String> = .init()
 
-          private let pointer: UnsafeMutablePointer<ModifyingTarget>
+          private let pointer: UnsafeMutablePointer<AccessingTarget>
 
-          init(pointer: UnsafeMutablePointer<ModifyingTarget>) {
+          init(pointer: UnsafeMutablePointer<AccessingTarget>) {
             self.pointer = pointer
           }
 
@@ -88,8 +91,9 @@ final class WriterMacroTests: XCTestCase {
             $_modifiedIdentifiers.insert("stored_property_wrapper")
             yield &pointer.pointee.stored_property_wrapper
           }
+          }
         }
-        }
+
       }
       """
     }
@@ -117,15 +121,16 @@ final class WriterMacroTests: XCTestCase {
 
       extension MyState: DetectingType {
 
-        typealias ModifyingTarget = Self
+        // MARK: - Accessing
+        typealias AccessingTarget = Self
 
         @discardableResult
-        public static func modify(source: inout Self, modifier: (inout Modifying) throws -> Void) rethrows -> ModifyingResult {
+        public static func modify(source: inout Self, modifier: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
 
           try withUnsafeMutablePointer(to: &source) { pointer in
-            var modifying = Modifying(pointer: pointer)
+            var modifying = Accessing(pointer: pointer)
             try modifier(&modifying)
-            return ModifyingResult(
+            return AccessingResult(
               readIdentifiers: modifying.$_readIdentifiers,
               modifiedIdentifiers: modifying.$_modifiedIdentifiers
             )
@@ -133,27 +138,29 @@ final class WriterMacroTests: XCTestCase {
         }
 
         @discardableResult
-        public static func read(source: Self, reader: (Modifying) throws -> Void) rethrows -> ReadResult {
-          // FIXME: avoid copying
-          var reading = source
+        public static func read(source: consuming Self, reader: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
 
-          return try withUnsafeMutablePointer(to: &reading) { pointer in
-            let modifying = Modifying(pointer: pointer)
-            try reader(modifying)
-            return ReadResult(
-              readIdentifiers: modifying.$_readIdentifiers
+          // TODO: check copying costs
+          var tmp = source
+
+          return try withUnsafeMutablePointer(to: &tmp) { pointer in
+            var modifying = Accessing(pointer: pointer)
+            try reader(&modifying)
+            return AccessingResult(
+              readIdentifiers: modifying.$_readIdentifiers,
+              modifiedIdentifiers: modifying.$_modifiedIdentifiers
             )
           }
         }
 
-        public struct Modifying /* want to be ~Copyable */ {
+        public struct Accessing /* want to be ~Copyable */ {
 
           public private (set) var $_readIdentifiers: Set<String> = .init()
           public private (set) var $_modifiedIdentifiers: Set<String> = .init()
 
-          private let pointer: UnsafeMutablePointer<ModifyingTarget>
+          private let pointer: UnsafeMutablePointer<AccessingTarget>
 
-          init(pointer: UnsafeMutablePointer<ModifyingTarget>) {
+          init(pointer: UnsafeMutablePointer<AccessingTarget>) {
             self.pointer = pointer
           }
 
@@ -166,8 +173,9 @@ final class WriterMacroTests: XCTestCase {
             $_modifiedIdentifiers.insert("constant_has_initial_value")
             yield &pointer.pointee.constant_has_initial_value
           }
+          }
         }
-        }
+
       }
       """
     }
@@ -226,15 +234,16 @@ final class WriterMacroTests: XCTestCase {
 
       extension MyState: DetectingType {
 
-        typealias ModifyingTarget = Self
+        // MARK: - Accessing
+        typealias AccessingTarget = Self
 
         @discardableResult
-        public static func modify(source: inout Self, modifier: (inout Modifying) throws -> Void) rethrows -> ModifyingResult {
+        public static func modify(source: inout Self, modifier: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
 
           try withUnsafeMutablePointer(to: &source) { pointer in
-            var modifying = Modifying(pointer: pointer)
+            var modifying = Accessing(pointer: pointer)
             try modifier(&modifying)
-            return ModifyingResult(
+            return AccessingResult(
               readIdentifiers: modifying.$_readIdentifiers,
               modifiedIdentifiers: modifying.$_modifiedIdentifiers
             )
@@ -242,56 +251,59 @@ final class WriterMacroTests: XCTestCase {
         }
 
         @discardableResult
-        public static func read(source: Self, reader: (Modifying) throws -> Void) rethrows -> ReadResult {
-          // FIXME: avoid copying
-          var reading = source
+        public static func read(source: consuming Self, reader: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
 
-          return try withUnsafeMutablePointer(to: &reading) { pointer in
-            let modifying = Modifying(pointer: pointer)
-            try reader(modifying)
-            return ReadResult(
-              readIdentifiers: modifying.$_readIdentifiers
+          // TODO: check copying costs
+          var tmp = source
+
+          return try withUnsafeMutablePointer(to: &tmp) { pointer in
+            var modifying = Accessing(pointer: pointer)
+            try reader(&modifying)
+            return AccessingResult(
+              readIdentifiers: modifying.$_readIdentifiers,
+              modifiedIdentifiers: modifying.$_modifiedIdentifiers
             )
           }
         }
 
-        public struct Modifying /* want to be ~Copyable */ {
+        public struct Accessing /* want to be ~Copyable */ {
 
           public private (set) var $_readIdentifiers: Set<String> = .init()
           public private (set) var $_modifiedIdentifiers: Set<String> = .init()
 
-          private let pointer: UnsafeMutablePointer<ModifyingTarget>
+          private let pointer: UnsafeMutablePointer<AccessingTarget>
 
-          init(pointer: UnsafeMutablePointer<ModifyingTarget>) {
+          init(pointer: UnsafeMutablePointer<AccessingTarget>) {
             self.pointer = pointer
           }
 
           public var computed_read_only: Int
-        {
-          mutating get {
-            constant_has_initial_value
-        }
+          {
+            mutating get {
+              constant_has_initial_value
+          }
+          }
+
+          public var computed_read_only2: Int
+          {
+            mutating
+                get {
+                  constant_has_initial_value
+                }
+          }
+
+          public var computed_readwrite: String
+          {
+            mutating
+                get {
+                  variable_no_initial_value
+                }
+                set {
+                  variable_no_initial_value = newValue
+                }
+          }
         }
 
-        public var computed_read_only2: Int
-        {
-          mutating
-              get {
-                constant_has_initial_value
-              }
-        }
-
-        public var computed_readwrite: String
-        {
-          mutating
-              get {
-                variable_no_initial_value
-              }
-              set {
-                variable_no_initial_value = newValue
-              }
-        }
-        }
       }
       """
     }
