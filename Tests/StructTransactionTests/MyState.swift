@@ -42,4 +42,9 @@ struct MyState {
     var name: String = ""
   }
 
+  @Exporting
+  mutating func updateName() {
+    self.name = "Hiroshi"
+  }
+
 }

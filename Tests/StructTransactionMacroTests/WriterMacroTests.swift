@@ -16,6 +16,94 @@ final class WriterMacroTests: XCTestCase {
     }
   }
 
+  func test_copying_functions() {
+
+    assertMacro {
+      """
+      @Detecting
+      struct MyState {
+        func hello() {
+        }
+
+        @Exporting
+        func hello2() {
+        }
+      }
+      """
+    } expansion: {
+      """
+      struct MyState {
+        func hello() {
+        }
+
+        @Exporting
+        func hello2() {
+        }
+      }
+
+      extension MyState: DetectingType {
+
+        // MARK: - Accessing
+        typealias AccessingTarget = Self
+
+        @discardableResult
+        public static func modify(source: inout Self, modifier: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
+
+          try withUnsafeMutablePointer(to: &source) { pointer in
+            var modifying = Accessing(pointer: pointer)
+            try modifier(&modifying)
+            return AccessingResult(
+              readIdentifiers: modifying.$_readIdentifiers,
+              modifiedIdentifiers: modifying.$_modifiedIdentifiers
+            )
+          }
+        }
+
+        @discardableResult
+        public static func read(source: consuming Self, reader: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
+
+          // TODO: check copying costs
+          var tmp = source
+
+          return try withUnsafeMutablePointer(to: &tmp) { pointer in
+            var modifying = Accessing(pointer: pointer)
+            try reader(&modifying)
+            return AccessingResult(
+              readIdentifiers: modifying.$_readIdentifiers,
+              modifiedIdentifiers: modifying.$_modifiedIdentifiers
+            )
+          }
+        }
+
+        public struct Accessing /* want to be ~Copyable */ {
+
+          public private (set) var $_readIdentifiers: Set<String> = .init()
+          public private (set) var $_modifiedIdentifiers: Set<String> = .init()
+
+          private let pointer: UnsafeMutablePointer<AccessingTarget>
+
+          init(pointer: UnsafeMutablePointer<AccessingTarget>) {
+            self.pointer = pointer
+          }
+
+          // MARK: - Properties
+
+
+
+          // MARK: - Functions
+
+
+
+          @Exporting
+          func hello2() {
+          }
+        }
+
+      }
+      """
+    }
+  }
+
   func test_() {
 
     assertMacro {
