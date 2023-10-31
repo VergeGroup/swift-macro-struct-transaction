@@ -8,10 +8,30 @@ struct JustWrapper<Value> {
 
 }
 
+@propertyWrapper
+struct Clamped<Value: Comparable> {
+  private var value: Value
+  let min: Value
+  let max: Value
+
+  init(wrappedValue: Value, min: Value, max: Value) {
+    self.min = min
+    self.max = max
+    self.value = Swift.min(Swift.max(wrappedValue, min), max)
+  }
+
+  var wrappedValue: Value {
+    get { return value }
+    set { value = Swift.min(Swift.max(newValue, min), max) }
+  }
+}
+
 final class WritingStateTests: XCTestCase {
 
   @Detecting
   struct MyState {
+
+    @Clamped(min: 0, max: 300) var height: Int = 0
 
     var age: Int = 18
     var name: String
@@ -49,6 +69,19 @@ final class WritingStateTests: XCTestCase {
     struct NestedAttached {
       var name: String = ""
     }
+
+  }
+
+  func testPropertyWrapper() {
+
+    var myState = MyState(name: "")
+
+    let r = MyState.modify(source: &myState) {
+      // should be clamped
+      $0.height = 400
+    }
+
+    XCTAssertEqual(myState.height, 300)
 
   }
 
