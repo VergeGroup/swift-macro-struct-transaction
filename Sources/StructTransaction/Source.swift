@@ -1,44 +1,42 @@
 
-@attached(extension, conformances: DetectingType, names: named(Modifying), named(modify(source:modifier:)), named(read(source:reader:)), named(ModifyingTarget))
+@attached(
+  extension,
+  conformances: DetectingType,
+  names: named(Accessing),
+  named(modify(source:modifier:)),
+  named(read(source:reader:)),
+  named(AccessingTarget)
+)
 public macro Detecting() = #externalMacro(module: "StructTransactionMacros", type: "WriterMacro")
 
+/**
+ Use ``Detecting()`` macro to adapt struct
+ */
 public protocol DetectingType {
 
-  associatedtype Modifying
+  associatedtype Accessing
 
   @discardableResult
-  static func modify(source: inout Self, modifier: (inout Modifying) throws -> Void) rethrows -> ModifyingResult
+  static func modify(source: inout Self, modifier: (inout Accessing) throws -> Void) rethrows -> AccessingResult
 
   @discardableResult
-  static func read(source: Self, reader: (Modifying) throws -> Void) rethrows -> ReadResult
+  static func read(source: Self, reader: (inout Accessing) throws -> Void) rethrows -> AccessingResult
 }
 
 extension DetectingType {
 
   @discardableResult
-  public mutating func modify(modifier: (inout Modifying) throws -> Void) rethrows -> ModifyingResult {
+  public mutating func modify(modifier: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
     try Self.modify(source: &self, modifier: modifier)
   }
 
   @discardableResult
-  public mutating func read(reader: (Modifying) throws -> Void) rethrows -> ReadResult {
+  public borrowing func read(reader: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
     try Self.read(source: self, reader: reader)
   }
 }
 
-public struct ReadResult {
-
-  public let readIdentifiers: Set<String>
-
-  public init(
-    readIdentifiers: Set<String>
-  ) {
-    self.readIdentifiers = readIdentifiers
-  }
-}
-
-
-public struct ModifyingResult {
+public struct AccessingResult {
 
   public let readIdentifiers: Set<String>
   public let modifiedIdentifiers: Set<String>

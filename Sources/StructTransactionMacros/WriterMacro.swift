@@ -23,10 +23,48 @@ extension WriterMacro: ExtensionMacro {
     in context: some SwiftSyntaxMacros.MacroExpansionContext
   ) throws -> [SwiftSyntax.ExtensionDeclSyntax] {
 
+    let accessingDecl = try Self.makeModifying(
+      of: node,
+      attachedTo: declaration,
+      providingExtensionsOf: type,
+      conformingTo: protocols,
+      in: context
+    )
+
+    let extensionDecl = """
+      extension \(type.trimmed): DetectingType {
+
+      // MARK: - Accessing
+      \(accessingDecl)
+
+      }
+      """ as DeclSyntax
+
+    return [
+      extensionDecl
+        .formatted(
+          using: .init(
+            indentationWidth: .spaces(2),
+            initialIndentation: [],
+            viewMode: .fixedUp
+          )
+        )
+        .cast(ExtensionDeclSyntax.self)
+    ]
+
+  }
+
+  private static func makeModifying(
+    of node: SwiftSyntax.AttributeSyntax,
+    attachedTo declaration: some SwiftSyntax.DeclGroupSyntax,
+    providingExtensionsOf type: some SwiftSyntax.TypeSyntaxProtocol,
+    conformingTo protocols: [SwiftSyntax.TypeSyntax],
+    in context: some SwiftSyntaxMacros.MacroExpansionContext
+  ) throws -> CodeBlockItemListSyntax {
     // Decode the expansion arguments.
     guard let structDecl = declaration.as(StructDeclSyntax.self) else {
       context.addDiagnostics(from: WriterMacroError.foundNotStructType, node: node)
-      return []
+      return ""
     }
 
     let c = PropertyCollector(viewMode: .all)
@@ -75,14 +113,14 @@ extension WriterMacro: ExtensionMacro {
     }
 
     let modifyingStructDecl = """
-      public struct Modifying /* want to be ~Copyable */ {
+      public struct Accessing /* want to be ~Copyable */ {
 
         public private(set) var $_readIdentifiers: Set<String> = .init()
         public private(set) var $_modifiedIdentifiers: Set<String> = .init()
 
-        private let pointer: UnsafeMutablePointer<ModifyingTarget>
+        private let pointer: UnsafeMutablePointer<AccessingTarget>
 
-        init(pointer: UnsafeMutablePointer<ModifyingTarget>) {
+        init(pointer: UnsafeMutablePointer<AccessingTarget>) {
           self.pointer = pointer
         }
 
@@ -92,53 +130,41 @@ extension WriterMacro: ExtensionMacro {
 
     let modifyingDecl =
       ("""
-      extension \(type.trimmed): DetectingType {
+      typealias AccessingTarget = Self
 
-        typealias ModifyingTarget = Self
+      @discardableResult
+      public static func modify(source: inout Self, modifier: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
 
-        @discardableResult
-        public static func modify(source: inout Self, modifier: (inout Modifying) throws -> Void) rethrows -> ModifyingResult {
-
-          try withUnsafeMutablePointer(to: &source) { pointer in
-            var modifying = Modifying(pointer: pointer)
-            try modifier(&modifying)
-            return ModifyingResult(
-              readIdentifiers: modifying.$_readIdentifiers,
-              modifiedIdentifiers: modifying.$_modifiedIdentifiers
-            )
-          }
+        try withUnsafeMutablePointer(to: &source) { pointer in
+          var modifying = Accessing(pointer: pointer)
+          try modifier(&modifying)
+          return AccessingResult(
+            readIdentifiers: modifying.$_readIdentifiers,
+            modifiedIdentifiers: modifying.$_modifiedIdentifiers
+          )
         }
+      }
 
-        @discardableResult
-        public static func read(source: Self, reader: (Modifying) throws -> Void) rethrows -> ReadResult {
-          // FIXME: avoid copying
-          var reading = source
+      @discardableResult
+      public static func read(source: consuming Self, reader: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
 
-          return try withUnsafeMutablePointer(to: &reading) { pointer in
-            let modifying = Modifying(pointer: pointer)
-            try reader(modifying)
-            return ReadResult(
-              readIdentifiers: modifying.$_readIdentifiers
-            )
-          }
+        // TODO: check copying costs
+        var tmp = source
+
+        return try withUnsafeMutablePointer(to: &tmp) { pointer in
+          var modifying = Accessing(pointer: pointer)
+          try reader(&modifying)
+          return AccessingResult(
+            readIdentifiers: modifying.$_readIdentifiers,
+            modifiedIdentifiers: modifying.$_modifiedIdentifiers
+          )
         }
+      }
 
       \(modifyingStructDecl)
-      }
-      """ as DeclSyntax)
+      """ as CodeBlockItemListSyntax)
 
-    return [
-      modifyingDecl
-        .formatted(
-          using: .init(
-            indentationWidth: .spaces(2),
-            initialIndentation: [],
-            viewMode: .fixedUp
-          )
-        )
-        .cast(ExtensionDeclSyntax.self)
-    ]
-
+    return modifyingDecl
   }
 
 }
@@ -151,24 +177,22 @@ private func makeMutatingGetter(_ block: AccessorBlockSyntax) -> AccessorBlockSy
     let decl = MutatingGetterConverter().visit(list)
 
     return """
-{
-  \(decl)
-}
-""" as AccessorBlockSyntax
+      {
+        \(decl)
+      }
+      """ as AccessorBlockSyntax
 
   case .getter(let getter):
     return """
-{
-  mutating get { \(getter) }
-}
-""" as AccessorBlockSyntax
+      {
+        mutating get { \(getter) }
+      }
+      """ as AccessorBlockSyntax
   }
 
 }
 
-/**
-convert get-accessor into mutating-get-accessor
- */
+/// convert get-accessor into mutating-get-accessor
 final class MutatingGetterConverter: SyntaxRewriter {
 
   override func visit(_ node: AccessorDeclSyntax) -> DeclSyntax {
@@ -257,4 +281,3 @@ final class PropertyCollector: SyntaxVisitor {
   }
 
 }
-
