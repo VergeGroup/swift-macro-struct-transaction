@@ -170,6 +170,8 @@ final class WriterMacroTests: XCTestCase {
             self.pointer = pointer
           }
 
+          // MARK: - Properties
+
           public var stored_property_wrapper: String  {
           mutating _read {
             $_readIdentifiers.insert("stored_property_wrapper")
@@ -180,6 +182,10 @@ final class WriterMacroTests: XCTestCase {
             yield &pointer.pointee.stored_property_wrapper
           }
           }
+
+          // MARK: - Functions
+
+
         }
 
       }
@@ -252,6 +258,8 @@ final class WriterMacroTests: XCTestCase {
             self.pointer = pointer
           }
 
+          // MARK: - Properties
+
           public var constant_has_initial_value: Int  {
           mutating _read {
             $_readIdentifiers.insert("constant_has_initial_value")
@@ -262,6 +270,10 @@ final class WriterMacroTests: XCTestCase {
             yield &pointer.pointee.constant_has_initial_value
           }
           }
+
+          // MARK: - Functions
+
+
         }
 
       }
@@ -365,6 +377,8 @@ final class WriterMacroTests: XCTestCase {
             self.pointer = pointer
           }
 
+          // MARK: - Properties
+
           public var computed_read_only: Int
           {
             mutating get {
@@ -390,6 +404,10 @@ final class WriterMacroTests: XCTestCase {
                   variable_no_initial_value = newValue
                 }
           }
+
+          // MARK: - Functions
+
+
         }
 
       }
