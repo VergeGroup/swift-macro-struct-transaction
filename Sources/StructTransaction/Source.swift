@@ -3,48 +3,16 @@
  Available only for structs
  */
 @attached(
-  extension,
-  conformances: DetectingType,
-  names: named(Accessing),
-  named(modify(source:modifier:)),
-  named(read(source:reader:)),
-  named(AccessingTarget)
+  memberAttribute
 )
-public macro Detecting() = #externalMacro(module: "StructTransactionMacros", type: "WriterMacro")
+public macro Tracking() = #externalMacro(module: "StructTransactionMacros", type: "TrackingMacro")
 
-/**
- Available only for member functions.
- Marker Macro that indicates if the function will be exported into Accessing struct.
- */
-@attached(peer)
-public macro Exporting() = #externalMacro(module: "StructTransactionMacros", type: "MarkerMacro")
-
-/**
- Use ``Detecting()`` macro to adapt struct
- */
-public protocol DetectingType {
-
-  associatedtype Accessing
-
-  @discardableResult
-  static func modify(source: inout Self, modifier: (inout Accessing) throws -> Void) rethrows -> AccessingResult
-
-  @discardableResult
-  static func read(source: Self, reader: (inout Accessing) throws -> Void) rethrows -> AccessingResult
-}
-
-extension DetectingType {
-
-  @discardableResult
-  public mutating func modify(modifier: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
-    try Self.modify(source: &self, modifier: modifier)
-  }
-
-  @discardableResult
-  public borrowing func read(reader: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
-    try Self.read(source: self, reader: reader)
-  }
-}
+@attached(
+  accessor, 
+  names: named(init), named(get), named(set), named(_modify)
+)
+@attached(peer, names: prefixed(`_backing_`))
+public macro TrackingProperty() = #externalMacro(module: "StructTransactionMacros", type: "TrackingPropertyMacro")
 
 public struct AccessingResult {
 
@@ -60,3 +28,57 @@ public struct AccessingResult {
   }
 }
 
+
+
+@Tracking
+struct MyState {
+  
+  init() {
+    stored_2 = 0
+  }
+  
+  var stored_1: Int = 18
+  
+  var stored_2: Int
+  
+  var computed_1: Int {
+    stored_1
+  }
+  
+  var subState: MySubState = .init()
+  
+}
+
+
+@Tracking
+struct MySubState {
+  
+  var stored_1: Int = 18
+  
+  var computed_1: Int {
+    stored_1
+  }
+  
+  init() {
+    
+  }
+  
+}
+
+#if canImport(Observation)
+import Observation
+
+@available(macOS 14.0, iOS 17.0, tvOS 15.0, watchOS 8.0, *)
+@Observable
+class Hoge {
+  
+  let stored: Int
+  
+  var stored_2: Int
+  
+  init(stored: Int) {
+    self.stored = stored
+    self.stored_2 = stored
+  }
+}
+#endif

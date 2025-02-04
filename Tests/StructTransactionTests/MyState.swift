@@ -1,14 +1,14 @@
 import StructTransaction
 
-@Detecting
+@Tracking
 struct MyState {
 
-  @Clamped(min: 0, max: 300) var height: Int = 0
-
+  var height: Int = 0
+    
   var age: Int = 18
   var name: String
 
-  @JustWrapper var edge: Int = 0
+  var edge: Int = 0
 
   var computedName: String {
     get {
@@ -37,12 +37,10 @@ struct MyState {
     var name = ""
   }
 
-  @Detecting
   struct NestedAttached {
     var name: String = ""
   }
 
-  @Exporting
   mutating func updateName() {
     self.name = "Hiroshi"
   }

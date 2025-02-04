@@ -4,12 +4,12 @@ import SwiftSyntaxMacros
 import SwiftSyntaxMacrosTestSupport
 import XCTest
 
-final class TracingMacroTests: XCTestCase {
+final class TrackingMacroTests: XCTestCase {
 
   override func invokeTest() {
     withMacroTesting(
       isRecording: false,
-      macros: ["Tracing": TracingMacro.self]
+      macros: ["Tracking": TrackingMacro.self]
     ) {
       super.invokeTest()
     }
@@ -19,14 +19,22 @@ final class TracingMacroTests: XCTestCase {
 
     assertMacro {
       """
-      @Tracing
+      @Tracking
       struct MyState {
+      
+        private var stored_0: Int = 18
 
-        var name: String
+        var stored_1: String
+      
+        let stored_2: Int = 0
 
         var age: Int { 0 }
 
-        @Clamp
+        var age2: Int {
+          get { 0 }
+          set { }
+        }
+
         var height: Int
 
         func compute() {
@@ -34,19 +42,42 @@ final class TracingMacroTests: XCTestCase {
       }
       """
     } expansion: {
-      """
-      struct MyState {
 
+      """
+            
+      struct MyState {
+            
+        @TrackingProperty
+
+            
         var name: String
 
+            
         var age: Int { 0 }
 
+            
+        var age2: Int {
+            
+          get { 0 }
+            
+          set { }
+            
+        }
+
+            
         @Clamp
+            
+        @TrackingProperty
+            
         var height: Int
 
+            
         func compute() {
+            
         }
+            
       }
+            
       """
     }
 

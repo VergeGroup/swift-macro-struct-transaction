@@ -13,6 +13,12 @@ public struct WriterMacro {
 
 }
 
+extension WriterMacro:MemberAttributeMacro {
+  public static func expansion(of node: AttributeSyntax, attachedTo declaration: some DeclGroupSyntax, providingAttributesFor member: some DeclSyntaxProtocol, in context: some MacroExpansionContext) throws -> [AttributeSyntax] {
+    return []
+  }
+}
+
 extension WriterMacro: ExtensionMacro {
 
   public static func expansion(
