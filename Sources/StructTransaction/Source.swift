@@ -89,6 +89,8 @@ class Hoge {
   
   var stored_2: Int
   
+  var name = ""
+  
   init(stored: Int) {
     self.stored = stored
     self.stored_2 = stored

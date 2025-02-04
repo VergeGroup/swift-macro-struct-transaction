@@ -37,7 +37,13 @@ struct MyState {
   var nested: Nested = .init(name: "hello")
   var nestedAttached: NestedAttached = .init(name: "")
 
+  @Tracking
   struct Nested {
+    
+    init(name: String) {
+      self.name = name
+    }
+    
     var name = ""
   }
 

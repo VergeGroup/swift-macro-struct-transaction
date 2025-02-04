@@ -8,7 +8,7 @@ final class COWTrackingProperyMacroTests: XCTestCase {
 
   override func invokeTest() {
     withMacroTesting(
-      isRecording: false,
+      isRecording: true,
       macros: [
         "COWTrackingProperty": COWTrackingPropertyMacro.self,
         "TrackingIgnored": TrackingIgnoredMacro.self,
@@ -48,7 +48,7 @@ final class COWTrackingProperyMacroTests: XCTestCase {
               $0.write(identifier: .init(name: "stored_0"))
             }
             if !isKnownUniquelyReferenced(&_backing_stored_0) {
-              _backing_stored_0 = .init(_backing_stored_0.value)
+              _backing_stored_0 = .init(newValue)
             } else {
               _backing_stored_0.value = newValue
             }
@@ -63,7 +63,7 @@ final class COWTrackingProperyMacroTests: XCTestCase {
             yield &_backing_stored_0.value
           }
         }
-          private var _backing_stored_0: _Backing_COW_Storage<Int> = .init(18)
+          private var _backing_stored_0: _Backing_COW_Storage<Int> = _Backing_COW_Storage.init(18)
 
         func compute() {
         }

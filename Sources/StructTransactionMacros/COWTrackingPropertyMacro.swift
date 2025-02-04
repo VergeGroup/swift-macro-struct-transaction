@@ -2,12 +2,10 @@ import SwiftCompilerPlugin
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
+import SwiftSyntaxMacroExpansion
 
 public struct COWTrackingPropertyMacro {
 
-  public enum Error: Swift.Error {
-
-  }
 }
 
 extension COWTrackingPropertyMacro: PeerMacro {
@@ -20,6 +18,13 @@ extension COWTrackingPropertyMacro: PeerMacro {
     guard let variableDecl = declaration.as(VariableDeclSyntax.self) else {
       return []
     }
+
+//    for binding in variableDecl.bindings {
+//      guard binding.typeAnnotation != nil else {
+//        context.diagnose(.init(node: node, message: MacroExpansionErrorMessage("Property needs type annotation")))
+//        return []
+//      }
+//    }
 
     var newMembers: [DeclSyntax] = []
 
@@ -53,7 +58,7 @@ extension COWTrackingPropertyMacro: PeerMacro {
         return "_Backing_COW_Storage<\(type.trimmed)>"
       })
       .modifyingInit({ initializer in                
-        return .init(value: ".init(\(initializer.value))" as ExprSyntax)        
+        return .init(value: "_Backing_COW_Storage.init(\(initializer.value))" as ExprSyntax)        
       })
     
     _variableDecl.leadingTrivia = .spaces(2)
@@ -92,12 +97,35 @@ extension COWTrackingPropertyMacro: AccessorMacro {
       }
       """
     )
+    
+    let readAccessor = AccessorDeclSyntax(
+      """
+      _read {
+        let keyPath = \\Self.\(raw: propertyName)
+        let currentKeyPath = Tracking._currentKeyPath(keyPath) ?? keyPath     
+        Tracking._pushKeyPath(keyPath)
+        
+        Tracking._tracking_modifyStorage {
+          $0.read(identifier: .init(keyPath: currentKeyPath))
+        }
+        yield \(raw: backingName).value
+      
+        Tracking._popKeyPath()
+      }
+      """
+    )
 
     let getAccessor = AccessorDeclSyntax(
       """
       get {
-        _tracking_modifyStorage {
-          $0.read(identifier: .init(name: "\(raw: propertyName)"))
+        let keyPath = \\Self.\(raw: propertyName)
+        let currentKeyPath = Tracking._currentKeyPath(keyPath) ?? keyPath     
+        Tracking._pushKeyPath(keyPath)
+        defer {
+          Tracking._popKeyPath()
+        }
+        Tracking._tracking_modifyStorage {
+          $0.read(identifier: .init(keyPath: currentKeyPath))
         }
         return \(raw: backingName).value 
       }
@@ -107,8 +135,14 @@ extension COWTrackingPropertyMacro: AccessorMacro {
     let setAccessor = AccessorDeclSyntax(
       """
       set {    
-        _tracking_modifyStorage {
-          $0.write(identifier: .init(name: "\(raw: propertyName)"))
+        let keyPath = \\Self.\(raw: propertyName)
+        let currentKeyPath = Tracking._currentKeyPath(keyPath) ?? keyPath
+        Tracking._pushKeyPath(keyPath)
+        defer {
+          Tracking._popKeyPath()
+        }
+        Tracking._tracking_modifyStorage {
+          $0.write(identifier: .init(keyPath: currentKeyPath))
         }
         if !isKnownUniquelyReferenced(&\(raw: backingName)) {
           \(raw: backingName) = .init(newValue)
@@ -122,8 +156,14 @@ extension COWTrackingPropertyMacro: AccessorMacro {
     let modifyAccessor = AccessorDeclSyntax(
       """
       _modify {
-        _tracking_modifyStorage {
-          $0.write(identifier: .init(name: "\(raw: propertyName)"))
+        let keyPath = \\Self.\(raw: propertyName)
+        let currentKeyPath = Tracking._currentKeyPath(keyPath) ?? keyPath
+        Tracking._pushKeyPath(keyPath)
+        defer {
+          Tracking._popKeyPath()
+        }
+        Tracking._tracking_modifyStorage {
+          $0.write(identifier: .init(keyPath: currentKeyPath))
         }
         if !isKnownUniquelyReferenced(&\(raw: backingName)) {
           \(raw: backingName) = .init(\(raw: backingName).value)
@@ -136,13 +176,15 @@ extension COWTrackingPropertyMacro: AccessorMacro {
     if binding.initializer == nil {
       return [
         initAccessor,
-        getAccessor,
+        readAccessor,
+//        getAccessor,
         setAccessor,
         modifyAccessor,
       ]
     } else {
       return [
-        getAccessor,
+        readAccessor,
+//        getAccessor,
         setAccessor,
         modifyAccessor,
       ]
