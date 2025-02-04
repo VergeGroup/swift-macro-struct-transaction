@@ -1,13 +1,12 @@
-
 import SwiftCompilerPlugin
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 
 public struct TrackingPropertyMacro {
-  
+
   public enum Error: Swift.Error {
-    
+
   }
 }
 
@@ -17,30 +16,43 @@ extension TrackingPropertyMacro: PeerMacro {
     providingPeersOf declaration: some DeclSyntaxProtocol,
     in context: some MacroExpansionContext
   ) throws -> [DeclSyntax] {
-    
-    
+
     guard let variableDecl = declaration.as(VariableDeclSyntax.self) else {
       return []
     }
-    
-    let renameRewriter = RenameIdentifierRewriter()
-    let modifierRewriter = MakePrivateRewriter()
-    
+
     var newMembers: [DeclSyntax] = []
-    
+
+    let ignoreMacroAttached = variableDecl.attributes.contains {
+      switch $0 {
+      case .attribute(let attribute):
+        return attribute.attributeName.description == "TrackingIgnored"
+      case .ifConfigDecl:
+        return false
+      }
+    }
+
+    guard !ignoreMacroAttached else {
+      return []
+    }
+
     for binding in variableDecl.bindings {
       if binding.accessorBlock != nil {
         // skip computed properties
         continue
       }
-      
-      let backingStorageDecl = modifierRewriter.visit(
-        renameRewriter.visit(variableDecl.trimmed)
-      )
-      
-      newMembers.append(backingStorageDecl)
     }
-    
+
+    var _variableDecl = variableDecl
+    _variableDecl.attributes = [.init(.init(stringLiteral: "@TrackingIgnored"))]
+
+    _variableDecl = _variableDecl
+      .renamingIdentifier(with: "_backing_")
+      .withPrivateModifier()
+
+
+    newMembers.append(_variableDecl.as(DeclSyntax.self)!)
+
     return newMembers
   }
 }
@@ -51,20 +63,20 @@ extension TrackingPropertyMacro: AccessorMacro {
     providingAccessorsOf declaration: some SwiftSyntax.DeclSyntaxProtocol,
     in context: some SwiftSyntaxMacros.MacroExpansionContext
   ) throws -> [SwiftSyntax.AccessorDeclSyntax] {
-    
+
     guard let variableDecl = declaration.as(VariableDeclSyntax.self) else {
       return []
     }
-    
-    // `@TrackingProperty` は単一のプロパティにのみ適用可能
+
     guard let binding = variableDecl.bindings.first,
-          let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self) else {
+      let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self)
+    else {
       return []
     }
-        
+
     let propertyName = identifierPattern.identifier.text
     let backingName = "_backing_" + propertyName
-    
+
     let initAccessor = AccessorDeclSyntax(
       """
       @storageRestrictions(initializes: \(raw: backingName))
@@ -73,19 +85,19 @@ extension TrackingPropertyMacro: AccessorMacro {
       }
       """
     )
-    
+
     let getAccessor = AccessorDeclSyntax(
       """
       get { \(raw: backingName) }
       """
     )
-    
+
     let setAccessor = AccessorDeclSyntax(
       """
       set { \(raw: backingName) = newValue }
       """
     )
-    
+
     let modifyAccessor = AccessorDeclSyntax(
       """
       _modify {
@@ -93,58 +105,56 @@ extension TrackingPropertyMacro: AccessorMacro {
       }
       """
     )
-    
-    if binding.initializer == nil {      
+
+    if binding.initializer == nil {
       return [
         initAccessor,
         getAccessor,
         setAccessor,
-        modifyAccessor
+        modifyAccessor,
       ]
     } else {
       return [
         getAccessor,
         setAccessor,
-        modifyAccessor
+        modifyAccessor,
       ]
     }
-    
+
   }
 
-  
 }
 
+extension VariableDeclSyntax {
+  func renamingIdentifier(with newName: String) -> VariableDeclSyntax {
+    let newBindings = self.bindings.map { binding -> PatternBindingSyntax in
 
-final class RenameIdentifierRewriter: SyntaxRewriter {
-  
-  init() {}
-  
-  override func visit(_ node: IdentifierPatternSyntax) -> PatternSyntax {
-    
-    let propertyName = node.identifier.text
-    let newIdentifier = IdentifierPatternSyntax.init(identifier: "_backing_\(raw: propertyName)")
-    
-    return super.visit(newIdentifier)
-    
-  }
-}
+      if let identifierPattern = binding.pattern.as(IdentifierPatternSyntax.self) {
 
-final class MakePrivateRewriter: SyntaxRewriter {
-  
-  init() {}
-  
-  //  override func visit(_ node: VariableDeclSyntax) -> DeclSyntax {
-  //    return super.visit(node.trimmed(matching: { $0.isNewline }))
-  //  }
-  
-  override func visit(_ node: DeclModifierListSyntax) -> DeclModifierListSyntax {
-    if node.contains(where: { $0.name.tokenKind == .keyword(.private) }) {
-      return super.visit(node)
+        let propertyName = identifierPattern.identifier.text
+
+        let newIdentifierPattern = identifierPattern.with(
+          \.identifier, "\(raw: newName)\(raw: propertyName)")
+        return binding.with(\.pattern, .init(newIdentifierPattern))
+      }
+      return binding
     }
-    
-    var modified = node 
-    modified.append(.init(name: .keyword(.private), trailingTrivia: .spaces(1)))    
-    
-    return super.visit(modified)
+
+    return self.with(\.bindings, .init(newBindings))
+  }
+}
+
+extension VariableDeclSyntax {
+  func withPrivateModifier() -> VariableDeclSyntax {
+
+    let privateModifier = DeclModifierSyntax.init(
+      name: .keyword(.private), trailingTrivia: .spaces(1))
+
+    var modifiers = self.modifiers
+    if modifiers.contains(where: { $0.name.tokenKind == .keyword(.private) }) {
+      return self
+    }
+    modifiers.append(privateModifier)
+    return self.with(\.modifiers, modifiers)
   }
 }

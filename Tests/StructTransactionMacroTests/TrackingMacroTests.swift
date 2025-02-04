@@ -42,42 +42,31 @@ final class TrackingMacroTests: XCTestCase {
       }
       """
     } expansion: {
-
       """
-            
       struct MyState {
-            
         @TrackingProperty
 
-            
-        var name: String
+        private var stored_0: Int = 18
+        @TrackingProperty
 
-            
+        var stored_1: String
+        @TrackingProperty
+
+        let stored_2: Int = 0
+
         var age: Int { 0 }
 
-            
         var age2: Int {
-            
           get { 0 }
-            
           set { }
-            
         }
-
-            
-        @Clamp
-            
         @TrackingProperty
-            
+
         var height: Int
 
-            
         func compute() {
-            
         }
-            
       }
-            
       """
     }
 

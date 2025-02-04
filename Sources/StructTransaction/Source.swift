@@ -9,6 +9,12 @@ public macro Tracking() = #externalMacro(module: "StructTransactionMacros", type
 
 @attached(
   accessor, 
+  names: named(willSet)
+)
+public macro TrackingIgnored() = #externalMacro(module: "StructTransactionMacros", type: "TrackingIgnoredMacro")
+
+@attached(
+  accessor, 
   names: named(init), named(get), named(set), named(_modify)
 )
 @attached(peer, names: prefixed(`_backing_`))
@@ -71,7 +77,7 @@ import Observation
 @available(macOS 14.0, iOS 17.0, tvOS 15.0, watchOS 8.0, *)
 @Observable
 class Hoge {
-  
+    
   let stored: Int
   
   var stored_2: Int
