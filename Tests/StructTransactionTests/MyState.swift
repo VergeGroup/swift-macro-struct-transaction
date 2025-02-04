@@ -2,6 +2,10 @@ import StructTransaction
 
 @Tracking
 struct MyState {
+  
+  init() {
+    self.name = ""
+  }
 
   var height: Int = 0
     

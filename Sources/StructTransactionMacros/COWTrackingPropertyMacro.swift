@@ -111,7 +111,7 @@ extension COWTrackingPropertyMacro: AccessorMacro {
           $0.write(identifier: .init(name: "\(raw: propertyName)"))
         }
         if !isKnownUniquelyReferenced(&\(raw: backingName)) {
-          \(raw: backingName) = .init(\(raw: backingName).value)
+          \(raw: backingName) = .init(newValue)
         } else {
           \(raw: backingName).value = newValue
         }
