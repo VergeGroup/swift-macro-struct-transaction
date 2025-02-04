@@ -95,13 +95,21 @@ extension COWTrackingPropertyMacro: AccessorMacro {
 
     let getAccessor = AccessorDeclSyntax(
       """
-      get { \(raw: backingName).value }
+      get {
+        _tracking_modifyStorage {
+          $0.read(identifier: .init(name: "\(raw: propertyName)"))
+        }
+        return \(raw: backingName).value 
+      }
       """
     )
 
     let setAccessor = AccessorDeclSyntax(
       """
-      set {       
+      set {    
+        _tracking_modifyStorage {
+          $0.write(identifier: .init(name: "\(raw: propertyName)"))
+        }
         if !isKnownUniquelyReferenced(&\(raw: backingName)) {
           \(raw: backingName) = .init(\(raw: backingName).value)
         } else {
@@ -114,6 +122,9 @@ extension COWTrackingPropertyMacro: AccessorMacro {
     let modifyAccessor = AccessorDeclSyntax(
       """
       _modify {
+        _tracking_modifyStorage {
+          $0.write(identifier: .init(name: "\(raw: propertyName)"))
+        }
         if !isKnownUniquelyReferenced(&\(raw: backingName)) {
           \(raw: backingName) = .init(\(raw: backingName).value)
         }

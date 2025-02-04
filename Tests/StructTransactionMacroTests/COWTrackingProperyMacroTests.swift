@@ -38,9 +38,15 @@ final class COWTrackingProperyMacroTests: XCTestCase {
         
         private var stored_0: Int = 18 {
           get {
-            _backing_stored_0.value
+            _tracking_modifyStorage {
+              $0.read(identifier: .init(name: "stored_0"))
+            }
+            return _backing_stored_0.value
           }
           set {
+            _tracking_modifyStorage {
+              $0.write(identifier: .init(name: "stored_0"))
+            }
             if !isKnownUniquelyReferenced(&_backing_stored_0) {
               _backing_stored_0 = .init(_backing_stored_0.value)
             } else {
@@ -48,6 +54,9 @@ final class COWTrackingProperyMacroTests: XCTestCase {
             }
           }
           _modify {
+            _tracking_modifyStorage {
+              $0.write(identifier: .init(name: "stored_0"))
+            }
             if !isKnownUniquelyReferenced(&_backing_stored_0) {
               _backing_stored_0 = .init(_backing_stored_0.value)
             }

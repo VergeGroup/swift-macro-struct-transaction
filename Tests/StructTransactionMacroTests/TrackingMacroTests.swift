@@ -44,13 +44,13 @@ final class TrackingMacroTests: XCTestCase {
     } expansion: {
       """
       struct MyState {
-        @TrackingProperty
+        @COWTrackingProperty
 
         private var stored_0: Int = 18
-        @TrackingProperty
+        @COWTrackingProperty
 
         var stored_1: String
-        @TrackingProperty
+        @COWTrackingProperty
 
         let stored_2: Int = 0
 
@@ -60,7 +60,7 @@ final class TrackingMacroTests: XCTestCase {
           get { 0 }
           set { }
         }
-        @TrackingProperty
+        @COWTrackingProperty
 
         var height: Int
 
