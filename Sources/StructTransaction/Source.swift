@@ -20,6 +20,13 @@ public macro TrackingIgnored() = #externalMacro(module: "StructTransactionMacros
 @attached(peer, names: prefixed(`_backing_`))
 public macro TrackingProperty() = #externalMacro(module: "StructTransactionMacros", type: "TrackingPropertyMacro")
 
+@attached(
+  accessor, 
+  names: named(init), named(get), named(set), named(_modify)
+)
+@attached(peer, names: prefixed(`_backing_`))
+public macro COWTrackingProperty() = #externalMacro(module: "StructTransactionMacros", type: "COWTrackingPropertyMacro")
+
 public struct AccessingResult {
 
   public let readIdentifiers: Set<String>

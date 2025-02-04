@@ -36,7 +36,7 @@ extension TrackingMacro: MemberAttributeMacro {
     
     if variableDecl.bindingSpecifier.tokenKind == .keyword(.let) ||
         variableDecl.bindingSpecifier.tokenKind == .keyword(.var) {
-      let macroAttribute = "@TrackingProperty"
+      let macroAttribute = "@COWTrackingProperty"
       let attributeSyntax = AttributeSyntax.init(stringLiteral: macroAttribute)
       
       return [attributeSyntax]

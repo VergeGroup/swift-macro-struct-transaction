@@ -1,16 +1,12 @@
 
-final class ReferenceEdgeStorage<Value>: @unchecked Sendable {
+public final class _Backing_COW_Storage<Value>: @unchecked Sendable {
   
-  var value: Value
+  public var value: Value
   
-  init(_ value: consuming Value) {
+  public init(_ value: consuming Value) {
     self.value = value
   }
-  
-  func read<T>(_ thunk: (borrowing Value) -> T) -> T {
-    thunk(value)
-  }
-  
+    
 }
 
 #if DEBUG
@@ -41,7 +37,7 @@ private struct After {
     }
   }
   
-  private var _cow_value: ReferenceEdgeStorage<Int>
+  private var _cow_value: _Backing_COW_Storage<Int>
   
 }
 

@@ -8,7 +8,7 @@ final class TrackingProperyMacroTests: XCTestCase {
 
   override func invokeTest() {
     withMacroTesting(
-      isRecording: true,
+      isRecording: false,
       macros: [
         "TrackingProperty": TrackingPropertyMacro.self,
         "TrackingIgnored": TrackingIgnoredMacro.self,
