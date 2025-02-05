@@ -1,6 +1,30 @@
 import StructTransaction
 
 @Tracking
+struct Nesting {
+  
+  var value: String = ""
+  
+  var next: Nesting?
+  
+  init(next: Nesting?) {
+    self.next = next
+  }
+  
+  init() {
+    
+    self.next = .init(
+      next: .init(
+        next: .init(
+          next: .init(next: nil)
+        )
+      )
+    )
+            
+  }
+}
+
+@Tracking
 struct MyState {
   
   init() {

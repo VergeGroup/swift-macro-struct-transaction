@@ -19,13 +19,6 @@ extension COWTrackingPropertyMacro: PeerMacro {
       return []
     }
 
-//    for binding in variableDecl.bindings {
-//      guard binding.typeAnnotation != nil else {
-//        context.diagnose(.init(node: node, message: MacroExpansionErrorMessage("Property needs type annotation")))
-//        return []
-//      }
-//    }
-
     var newMembers: [DeclSyntax] = []
 
     let ignoreMacroAttached = variableDecl.attributes.contains {
@@ -101,54 +94,26 @@ extension COWTrackingPropertyMacro: AccessorMacro {
     let readAccessor = AccessorDeclSyntax(
       """
       _read {
-        let keyPath = \\Self.\(raw: propertyName)
-        let currentKeyPath = Tracking._currentKeyPath(keyPath) ?? keyPath     
-        Tracking._pushKeyPath(keyPath)
-        
-        Tracking._tracking_modifyStorage {
-          $0.read(identifier: .init(keyPath: currentKeyPath))
+        _Tracking._tracking_modifyStorage {
+          $0.read(identifier: .init(_tracking_context.makePath(endpoint: .init("\(raw: propertyName)"))))
         }
-        yield \(raw: backingName).value
-      
-        Tracking._popKeyPath()
-      }
-      """
-    )
-
-    let getAccessor = AccessorDeclSyntax(
-      """
-      get {
-        let keyPath = \\Self.\(raw: propertyName)
-        let currentKeyPath = Tracking._currentKeyPath(keyPath) ?? keyPath     
-        Tracking._pushKeyPath(keyPath)
-        defer {
-          Tracking._popKeyPath()
-        }
-        Tracking._tracking_modifyStorage {
-          $0.read(identifier: .init(keyPath: currentKeyPath))
-        }
-        return \(raw: backingName).value 
+        yield \(raw: backingName).value    
       }
       """
     )
 
     let setAccessor = AccessorDeclSyntax(
       """
-      set {    
-        let keyPath = \\Self.\(raw: propertyName)
-        let currentKeyPath = Tracking._currentKeyPath(keyPath) ?? keyPath
-        Tracking._pushKeyPath(keyPath)
-        defer {
-          Tracking._popKeyPath()
-        }
-        Tracking._tracking_modifyStorage {
-          $0.write(identifier: .init(keyPath: currentKeyPath))
+      set {                                 
+        _Tracking._tracking_modifyStorage {
+          $0.write(identifier: .init(_tracking_context.makePath(endpoint: .init("\(raw: propertyName)"))))
         }
         if !isKnownUniquelyReferenced(&\(raw: backingName)) {
           \(raw: backingName) = .init(newValue)
         } else {
           \(raw: backingName).value = newValue
         }
+      
       }
       """
     )
@@ -156,14 +121,8 @@ extension COWTrackingPropertyMacro: AccessorMacro {
     let modifyAccessor = AccessorDeclSyntax(
       """
       _modify {
-        let keyPath = \\Self.\(raw: propertyName)
-        let currentKeyPath = Tracking._currentKeyPath(keyPath) ?? keyPath
-        Tracking._pushKeyPath(keyPath)
-        defer {
-          Tracking._popKeyPath()
-        }
-        Tracking._tracking_modifyStorage {
-          $0.write(identifier: .init(keyPath: currentKeyPath))
+        _Tracking._tracking_modifyStorage {
+          $0.write(identifier: .init(_tracking_context.makePath(endpoint: .init("\(raw: propertyName)"))))
         }
         if !isKnownUniquelyReferenced(&\(raw: backingName)) {
           \(raw: backingName) = .init(\(raw: backingName).value)
@@ -177,14 +136,12 @@ extension COWTrackingPropertyMacro: AccessorMacro {
       return [
         initAccessor,
         readAccessor,
-//        getAccessor,
         setAccessor,
         modifyAccessor,
       ]
     } else {
       return [
         readAccessor,
-//        getAccessor,
         setAccessor,
         modifyAccessor,
       ]

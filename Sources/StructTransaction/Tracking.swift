@@ -1,12 +1,80 @@
 import Foundation
+import os.lock
 
-public struct Storage: Equatable {
+public final class _TrackingContext: @unchecked Sendable {
+  
+  public weak var parent: _TrackingContext?
+      
+  public var path: PropertyPath? {
+    get {
+      storage.withLockUnchecked {
+        $0[Unmanaged.passUnretained(Thread.current).toOpaque()]
+      }
+    }
+    set {
+      storage.withLockUnchecked {
+        $0[Unmanaged.passUnretained(Thread.current).toOpaque()] = newValue
+      }
+    }
+  }
+    
+  @usableFromInline
+  let storage: OSAllocatedUnfairLock<[UnsafeMutableRawPointer : PropertyPath]> = .init(
+    uncheckedState: [:]
+  )
+  
+  public func makePath(endpoint: PropertyPath) -> String {
+    sequence(first: self, next: { $0?.parent })
+      .reversed()
+      .map { $0?.path?.value ?? "" }
+      .joined(separator: ".") + "." + endpoint.value
+  }
+    
+  public init() {    
+  }
+}
+
+public struct PropertyPath {
+  
+  public let value: String
+  
+  public init(_ value: String) {
+    self.value = value
+  }
+  
+}
+
+public protocol TrackingObject {
+  var _tracking_context: _TrackingContext { get }
+  func _tracking_propagate(parentContext: _TrackingContext?, path: PropertyPath)
+}
+
+extension TrackingObject {
+  
+  public func tracking(_ applier: () -> Void) -> TrackingResult {
+    startTracking()
+    defer {
+      endTracking()
+    }
+    return withTracking {
+      applier()
+    }
+  }
+  
+  private func startTracking() {    
+    self._tracking_propagate(parentContext: nil, path: .init(_typeName(type(of: self))))
+  }
+  private func endTracking() {
+  }
+}
+
+public struct TrackingResult: Equatable {
   
   public struct Identifier: Hashable {
-    public let keyPath: AnyKeyPath
+    public let pathString: String
     
-    public init(keyPath: AnyKeyPath) {
-      self.keyPath = keyPath
+    public init(_ value: String) {
+      self.pathString = value    
     }
   }
   
@@ -28,18 +96,18 @@ private enum ThreadDictionaryKey {
 }
 
 extension NSMutableDictionary {
-  fileprivate var currentKeyPathStack: Tracking.KeyPathStack? {
+  fileprivate var currentKeyPathStack: _Tracking.KeyPathStack? {
     get {
-      self[ThreadDictionaryKey.currentKeyPathStack] as? Tracking.KeyPathStack
+      self[ThreadDictionaryKey.currentKeyPathStack] as? _Tracking.KeyPathStack
     }
     set {
       self[ThreadDictionaryKey.currentKeyPathStack] = newValue
     }  
   }
   
-  fileprivate var tracking: Storage? {
+  fileprivate var tracking: TrackingResult? {
     get {
-      self[ThreadDictionaryKey.tracking] as? Storage
+      self[ThreadDictionaryKey.tracking] as? TrackingResult
     }
     set {
       self[ThreadDictionaryKey.tracking] = newValue
@@ -47,7 +115,7 @@ extension NSMutableDictionary {
   }
 }
 
-public enum Tracking {
+public enum _Tracking {
   
   public static func _pushKeyPath(_ keyPath: AnyKeyPath) {
     if Thread.current.threadDictionary.currentKeyPathStack == nil {
@@ -106,7 +174,7 @@ public enum Tracking {
         
   }
   
-  public static func _tracking_modifyStorage(_ modifier: (inout Storage) -> Void) {
+  public static func _tracking_modifyStorage(_ modifier: (inout TrackingResult) -> Void) {
     guard Thread.current.threadDictionary.tracking != nil else {
       return
     }
@@ -114,13 +182,13 @@ public enum Tracking {
   }
 }
 
-public func withTracking(_ perform: () -> Void) -> Storage {
+private func withTracking(_ perform: () -> Void) -> TrackingResult {
   let current = Thread.current.threadDictionary.tracking
   defer {
     Thread.current.threadDictionary.tracking = current
   }
   
-  Thread.current.threadDictionary.tracking = Storage()  
+  Thread.current.threadDictionary.tracking = TrackingResult()  
   perform()  
   let result = Thread.current.threadDictionary.tracking!
   return result

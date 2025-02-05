@@ -1,5 +1,6 @@
 import SwiftSyntax
 
+/*
 final class PropertyCollector: SyntaxVisitor {
 
   enum Property {
@@ -73,3 +74,4 @@ final class PropertyCollector: SyntaxVisitor {
   }
 
 }
+*/

@@ -1,6 +1,7 @@
 
 public final class _Backing_COW_Storage<Value>: @unchecked Sendable {
   
+  public var parentKeyPath: AnyKeyPath?
   public var value: Value
   
   public init(_ value: consuming Value) {
