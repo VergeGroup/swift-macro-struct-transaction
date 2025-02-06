@@ -1,62 +1,91 @@
-
 /**
  Available only for structs
  */
 @attached(
-  extension,
-  conformances: DetectingType,
-  names: named(Accessing),
-  named(modify(source:modifier:)),
-  named(read(source:reader:)),
-  named(AccessingTarget)
+  memberAttribute
 )
-public macro Detecting() = #externalMacro(module: "StructTransactionMacros", type: "WriterMacro")
+@attached(
+  extension, conformances: TrackingObject, names: named(_tracking_propagate)
+)
+@attached(
+  member, names: named(_tracking_context)
+)
+public macro Tracking() = #externalMacro(module: "StructTransactionMacros", type: "TrackingMacro")
 
-/**
- Available only for member functions.
- Marker Macro that indicates if the function will be exported into Accessing struct.
- */
-@attached(peer)
-public macro Exporting() = #externalMacro(module: "StructTransactionMacros", type: "MarkerMacro")
+@attached(
+  accessor,
+  names: named(willSet)
+)
+public macro TrackingIgnored() =
+  #externalMacro(module: "StructTransactionMacros", type: "TrackingIgnoredMacro")
 
-/**
- Use ``Detecting()`` macro to adapt struct
- */
-public protocol DetectingType {
+@attached(
+  accessor,
+  names: named(init), named(get), named(set), named(_modify)
+)
+@attached(peer, names: prefixed(`_backing_`))
+public macro TrackingProperty() =
+  #externalMacro(module: "StructTransactionMacros", type: "TrackingPropertyMacro")
 
-  associatedtype Accessing
+@attached(
+  accessor,
+  names: named(init), named(_read), named(set), named(_modify)
+)
+@attached(peer, names: prefixed(`_backing_`))
+public macro COWTrackingProperty() =
+  #externalMacro(module: "StructTransactionMacros", type: "COWTrackingPropertyMacro")
 
-  @discardableResult
-  static func modify(source: inout Self, modifier: (inout Accessing) throws -> Void) rethrows -> AccessingResult
+@Tracking
+struct MyState {
 
-  @discardableResult
-  static func read(source: Self, reader: (inout Accessing) throws -> Void) rethrows -> AccessingResult
-}
-
-extension DetectingType {
-
-  @discardableResult
-  public mutating func modify(modifier: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
-    try Self.modify(source: &self, modifier: modifier)
+  init() {
+    stored_2 = 0
   }
 
-  @discardableResult
-  public borrowing func read(reader: (inout Accessing) throws -> Void) rethrows -> AccessingResult {
-    try Self.read(source: self, reader: reader)
+  var stored_1: Int = 18
+
+  var stored_2: Int
+
+  var computed_1: Int {
+    stored_1
   }
+
+  var subState: MySubState = .init()
+
 }
 
-public struct AccessingResult {
+@Tracking
+struct MySubState {
 
-  public let readIdentifiers: Set<String>
-  public let modifiedIdentifiers: Set<String>
+  var stored_1: Int = 18
 
-  public init(
-    readIdentifiers: Set<String>,
-    modifiedIdentifiers: Set<String>
-  ) {
-    self.readIdentifiers = readIdentifiers
-    self.modifiedIdentifiers = modifiedIdentifiers
+  var computed_1: Int {
+    stored_1
   }
+
+  init() {
+
+  }
+
 }
+
+#if canImport(Observation)
+  import Observation
+
+  @available(macOS 14.0, iOS 17.0, tvOS 15.0, watchOS 8.0, *)
+  @Observable
+  class Hoge {
+
+    let stored: Int
+
+    var stored_2: Int
+
+    var name = ""
+
+    init(stored: Int) {
+      self.stored = stored
+      self.stored_2 = stored
+    }
+  }
+#endif
 

@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:swift-macro-struct-transaction}",
+      "name": "Debug StructTransactionClient",
+      "program": "${workspaceFolder:swift-macro-struct-transaction}/.build/debug/StructTransactionClient",
+      "preLaunchTask": "swift: Build Debug StructTransactionClient"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "args": [],
+      "cwd": "${workspaceFolder:swift-macro-struct-transaction}",
+      "name": "Release StructTransactionClient",
+      "program": "${workspaceFolder:swift-macro-struct-transaction}/.build/release/StructTransactionClient",
+      "preLaunchTask": "swift: Build Release StructTransactionClient"
+    }
+  ]
+}
