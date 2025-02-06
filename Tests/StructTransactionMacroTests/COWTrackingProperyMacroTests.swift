@@ -32,25 +32,20 @@ final class COWTrackingProperyMacroTests: XCTestCase {
       }
       """
     } expansion: {
-      #"""
+      """
       struct MyState {
 
         
         private var stored_0: Int = 18 {
           _read {
-            let currentKeyPath = (_backing_stored_0 as? TrackingObject)?._tracking_context.parentKeyPath?.appending(path: \Self.stored_0) ?? \Self.stored_0
-            Tracking._tracking_modifyStorage {
-              $0.read(identifier: .init(keyPath: currentKeyPath))
+            _Tracking._tracking_modifyStorage {
+              $0.accessorRead(path: _tracking_context.path?.pushed(.init("stored_0")))
             }
             yield _backing_stored_0.value
           }
           set {
-
-            (newValue as? TrackingObject)?.propagateKeyPath(\Self.stored_0)
-
-            let currentKeyPath = (_backing_stored_0 as? TrackingObject)?._tracking_context.parentKeyPath?.appending(path: \Self.stored_0) ?? \Self.stored_0
-            Tracking._tracking_modifyStorage {
-              $0.write(identifier: .init(keyPath: currentKeyPath))
+            _Tracking._tracking_modifyStorage {
+              $0.accessorSet(path: _tracking_context.path?.pushed(.init("stored_0")))
             }
             if !isKnownUniquelyReferenced(&_backing_stored_0) {
               _backing_stored_0 = .init(newValue)
@@ -60,9 +55,8 @@ final class COWTrackingProperyMacroTests: XCTestCase {
 
           }
           _modify {
-            let currentKeyPath = (_backing_stored_0 as? TrackingObject)?._tracking_context.parentKeyPath?.appending(path: \Self.stored_0) ?? \Self.stored_0
-            Tracking._tracking_modifyStorage {
-              $0.write(identifier: .init(keyPath: currentKeyPath))
+            _Tracking._tracking_modifyStorage {
+              $0.accessorModify(path: _tracking_context.path?.pushed(.init("stored_0")))
             }
             if !isKnownUniquelyReferenced(&_backing_stored_0) {
               _backing_stored_0 = .init(_backing_stored_0.value)
@@ -75,7 +69,7 @@ final class COWTrackingProperyMacroTests: XCTestCase {
         func compute() {
         }
       }
-      """#
+      """
     }
 
   }

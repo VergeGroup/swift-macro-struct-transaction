@@ -95,7 +95,7 @@ extension COWTrackingPropertyMacro: AccessorMacro {
       """
       _read {
         _Tracking._tracking_modifyStorage {
-          $0.read(identifier: .init(_tracking_context.makePath(endpoint: .init("\(raw: propertyName)"))))
+          $0.accessorRead(path: _tracking_context.path?.pushed(.init("\(raw: propertyName)")))
         }
         yield \(raw: backingName).value    
       }
@@ -106,7 +106,7 @@ extension COWTrackingPropertyMacro: AccessorMacro {
       """
       set {                                 
         _Tracking._tracking_modifyStorage {
-          $0.write(identifier: .init(_tracking_context.makePath(endpoint: .init("\(raw: propertyName)"))))
+          $0.accessorSet(path: _tracking_context.path?.pushed(.init("\(raw: propertyName)")))
         }
         if !isKnownUniquelyReferenced(&\(raw: backingName)) {
           \(raw: backingName) = .init(newValue)
@@ -122,7 +122,7 @@ extension COWTrackingPropertyMacro: AccessorMacro {
       """
       _modify {
         _Tracking._tracking_modifyStorage {
-          $0.write(identifier: .init(_tracking_context.makePath(endpoint: .init("\(raw: propertyName)"))))
+          $0.accessorModify(path: _tracking_context.path?.pushed(.init("\(raw: propertyName)")))
         }
         if !isKnownUniquelyReferenced(&\(raw: backingName)) {
           \(raw: backingName) = .init(\(raw: backingName).value)

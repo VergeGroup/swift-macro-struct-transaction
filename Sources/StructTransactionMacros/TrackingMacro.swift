@@ -65,7 +65,9 @@ extension TrackingMacro: ExtensionMacro {
     
     let operation = members.map { member in
       """
-      (\(member) as? TrackingObject)?._tracking_propagate(parentContext: _tracking_context, path: .init("\(member)"))
+      (\(member) as? TrackingObject)?._tracking_propagate(
+        path: path.pushed(.init("\(member)"))
+      )
       """
     }.joined(separator: "\n")
     
@@ -77,8 +79,7 @@ extension TrackingMacro: ExtensionMacro {
       ("""
       extension \(structDecl.name.trimmed) {
       
-        func _tracking_propagate(parentContext: _TrackingContext?, path: PropertyPath) {
-          _tracking_context.parent = parentContext
+        func _tracking_propagate(path: PropertyPath) {
           _tracking_context.path = path
           \(raw: operation)
         }
