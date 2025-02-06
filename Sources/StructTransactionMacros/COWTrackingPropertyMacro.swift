@@ -94,6 +94,7 @@ extension COWTrackingPropertyMacro: AccessorMacro {
     let readAccessor = AccessorDeclSyntax(
       """
       _read {
+        (\(raw: backingName).value as? TrackingObject)?._tracking_context.path = _tracking_context.path?.pushed(.init("\(raw: propertyName)"))
         _Tracking._tracking_modifyStorage {
           $0.accessorRead(path: _tracking_context.path?.pushed(.init("\(raw: propertyName)")))
         }
@@ -104,7 +105,8 @@ extension COWTrackingPropertyMacro: AccessorMacro {
 
     let setAccessor = AccessorDeclSyntax(
       """
-      set {                                 
+      set {      
+        (\(raw: backingName).value as? TrackingObject)?._tracking_context.path = _tracking_context.path?.pushed(.init("\(raw: propertyName)"))
         _Tracking._tracking_modifyStorage {
           $0.accessorSet(path: _tracking_context.path?.pushed(.init("\(raw: propertyName)")))
         }
@@ -121,6 +123,7 @@ extension COWTrackingPropertyMacro: AccessorMacro {
     let modifyAccessor = AccessorDeclSyntax(
       """
       _modify {
+        (\(raw: backingName).value as? TrackingObject)?._tracking_context.path = _tracking_context.path?.pushed(.init("\(raw: propertyName)"))
         _Tracking._tracking_modifyStorage {
           $0.accessorModify(path: _tracking_context.path?.pushed(.init("\(raw: propertyName)")))
         }

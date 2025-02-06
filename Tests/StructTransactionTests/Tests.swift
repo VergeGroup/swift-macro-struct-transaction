@@ -54,15 +54,38 @@ struct Tests {
     let original = Nesting.init()
         
     let result = original.tracking {
-      _ = original.next?.next?.value
+      _ = original._1?._2?.value
     }
         
     #expect(
       result.readGraph.prettyPrint() ==
       """
       root {
-        next {
-          next {
+        _1 {
+          _2 {
+            value
+          }
+        }
+      }
+      """
+    )        
+  }
+  
+  @Test  
+  func tracking_nest_set() {
+    
+    var original = Nesting.init()
+    
+    let result = original.tracking {
+      original._1?._1?.value = "AAA"
+    }
+    
+    #expect(
+      result.writeGraph.prettyPrint() ==
+      """
+      root {
+        _1 {
+          _1 {
             value
           }
         }
@@ -77,12 +100,23 @@ struct Tests {
     let original = Nesting.init()
     
     let result = original.tracking {
-      let sub = original.next
+      let sub = original._1
       
-      _ = sub?.next?.value
+      _ = sub?._1?.value
     }
     
-//    #expect(result.readIdentifiers.contains(.init("StructTransactionTests.Nesting.next.next.value")))
+    #expect(
+      result.readGraph.prettyPrint() ==
+      """
+      root {
+        _1 {
+          _1 {
+            value
+          }
+        }
+      }
+      """
+    )      
     
   }
   
@@ -92,40 +126,98 @@ struct Tests {
     var original = Nesting.init()
     
     let result = original.tracking {      
-      original.next = .init(next: nil)      
+      original._1 = .init(_1: nil, _2: nil, _3: nil)
     }
-        
-//    #expect(
-//      result.writeIdentifiers.contains(.init("StructTransactionTests.Nesting.next.next.value"))
-//    )
+       
+    #expect(
+      result.writeGraph.prettyPrint() ==
+      """
+      root {
+        _1
+      }
+      """
+    )   
     
   }
   
   @Test  
-  func tracking_nest_write_set() {
+  func tracking_nest2_write_modify() {
     
     var original = Nesting.init()
     
-    let result = original.tracking {
-      original.next?.next?.value = "AAA"      
+    let result = original.tracking {      
+      original._1?._1 = .init(_1: nil, _2: nil, _3: nil)
     }
-      
-//    #expect(
-//      result.writeIdentifiers.contains(.init("StructTransactionTests.Nesting.next.next.value"))
-//    )
+    
+    #expect(
+      result.writeGraph.prettyPrint() ==
+      """
+      root {
+        _1 {
+          _1
+        }
+      }
+      """
+    )   
     
   }
   
+  @Test 
+  func test_cow() {
+    var original = Nesting.init()
+    original._1?._1?.value = "AAA"
+  }
+  
+  @Test  
+  func tracking_nest3_write_modify() {
+    
+    var original = Nesting.init()
+    
+    let result = original.tracking {      
+      original._1?._1?.value = "AAA"
+    }
+    
+    #expect(
+      result.writeGraph.prettyPrint() ==
+      """
+      root {
+        _1 {
+          _1 {
+            value
+          }
+        }
+      }
+      """
+    )   
+    
+  }
+    
+  /**
+   ⚠️ original._1 is not actually modified, but the write graph is still correct
+   */
   @Test  
   func tracking_nest_detaching_write() {
     
     let original = Nesting.init()
     
     let result = original.tracking {
-      var sub = original.next
+      var sub = original._1
       
-      sub?.next?.value = "AAA"
+      sub?._1?.value = "AAA"
     }    
+    
+    #expect(
+      result.writeGraph.prettyPrint() ==
+      """
+      root {
+        _1 {
+          _1 {
+            value
+          }
+        }
+      }
+      """
+    )   
     
 //    #expect(
 //      result.writeIdentifiers.contains(.init("StructTransactionTests.Nesting.next.next.value"))

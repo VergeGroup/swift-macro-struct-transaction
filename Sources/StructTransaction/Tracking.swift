@@ -58,7 +58,6 @@ public struct PropertyNode: Hashable {
 
     if foundIndex != nil {
     } else {
-      // 対象ノードが存在しない場合、新たなノードを生成し、再帰的に apply を呼び出してから追加する
       var newNode = PropertyNode(name: targetName)
       newNode.apply(components: next)
       nodes.append(newNode)
@@ -139,7 +138,7 @@ public struct PropertyPath: Equatable {
 
 public protocol TrackingObject {
   var _tracking_context: _TrackingContext { get }
-  func _tracking_propagate(path: PropertyPath)
+//  func _tracking_propagate(path: PropertyPath)
 }
 
 extension TrackingObject {
@@ -155,7 +154,7 @@ extension TrackingObject {
   }
 
   private func startTracking() {
-    self._tracking_propagate(path: .root)
+    _tracking_context.path = .root
   }
 
   private func endTracking() {
@@ -178,17 +177,13 @@ public struct TrackingResult: Equatable {
 
   public mutating func accessorRead(path: PropertyPath?) {
     guard let path = path else {
-      assertionFailure("Path must not be nil")
       return
     }
-    readGraph.apply(path: path)
-    
-    readGraph.prettyPrint()
+    readGraph.apply(path: path)    
   }
 
   public mutating func accessorSet(path: PropertyPath?) {
     guard let path = path else {
-      assertionFailure("Path must not be nil")
       return
     }
     writeGraph.apply(path: path)
@@ -196,7 +191,6 @@ public struct TrackingResult: Equatable {
 
   public mutating func accessorModify(path: PropertyPath?) {
     guard let path = path else {
-      assertionFailure("Path must not be nil")
       return
     }
     writeGraph.apply(path: path)
