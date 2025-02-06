@@ -201,29 +201,23 @@ struct Tests {
     
     let original = Nesting.init()
     
-    let result = original.tracking {
+    var result = original.tracking {
       var sub = original._1
       
       sub?._1?.value = "AAA"
     }    
-        
+    
+    result.graph.shakeAsWrite()
+            
     #expect(
       result.graph.prettyPrint() ==
       """
       root {
-        _1- {
-          _1+ {
-            value+
-          }
-        }
+        _1-
       }
       """
     )   
         
-//    #expect(
-//      result.writeIdentifiers.contains(.init("StructTransactionTests.Nesting.next.next.value"))
-//    )
-    
   }
   
 //  @Test
