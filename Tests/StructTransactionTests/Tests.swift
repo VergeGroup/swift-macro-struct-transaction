@@ -178,12 +178,12 @@ struct Tests {
     }
     
     #expect(
-      result.writeGraph.prettyPrint() ==
+      result.graph.prettyPrint() ==
       """
       root {
-        _1 {
-          _1 {
-            value
+        _1+ {
+          _1+ {
+            value+
           }
         }
       }
@@ -193,7 +193,8 @@ struct Tests {
   }
     
   /**
-   ⚠️ original._1 is not actually modified, but the write graph is still correct
+   A case of detaching a nested object and then modifying it.
+   which means the original object is not modified.
    */
   @Test  
   func tracking_nest_detaching_write() {
@@ -205,20 +206,20 @@ struct Tests {
       
       sub?._1?.value = "AAA"
     }    
-    
+        
     #expect(
-      result.writeGraph.prettyPrint() ==
+      result.graph.prettyPrint() ==
       """
       root {
-        _1 {
-          _1 {
-            value
+        _1- {
+          _1+ {
+            value+
           }
         }
       }
       """
     )   
-    
+        
 //    #expect(
 //      result.writeIdentifiers.contains(.init("StructTransactionTests.Nesting.next.next.value"))
 //    )
